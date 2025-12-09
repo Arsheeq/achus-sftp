@@ -233,9 +233,18 @@ export function Dashboard() {
   const hasRoleShare = user?.roles?.some(r => r.can_share) ?? false;
   const hasRoleRead = user?.roles?.some(r => r.can_read) ?? false;
   const userFolders = folderAccess?.folders ?? [];
-  const hasFolderWrite = userFolders.some(f => f.can_write);
-  const hasFolderDelete = userFolders.some(f => f.can_delete);
-  const hasFolderShare = userFolders.some(f => f.can_share);
+  
+  const isInAssignedFolder = (folderPath: string) => {
+    const normalizedCurrent = currentFolder.endsWith('/') ? currentFolder : currentFolder + '/';
+    const normalizedTarget = folderPath.endsWith('/') ? folderPath : folderPath + '/';
+    return currentFolder === folderPath || normalizedCurrent.startsWith(normalizedTarget);
+  };
+  
+  const currentFolderAccess = userFolders.find(f => isInAssignedFolder(f.folder_path));
+  
+  const hasFolderWrite = currentFolderAccess?.can_write ?? false;
+  const hasFolderDelete = currentFolderAccess?.can_delete ?? false;
+  const hasFolderShare = currentFolderAccess?.can_share ?? false;
   
   const canWrite = user?.is_admin || hasRoleWrite || hasFolderWrite;
   const canDelete = user?.is_admin || hasRoleDelete || hasFolderDelete;

@@ -200,8 +200,8 @@ export function AdminPanel() {
     <Layout>
       <div className="bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-8rem)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6 flex justify-between items-center">
-            <Button variant="ghost" onClick={() => setLocation('/dashboard')}>
+          <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <Button variant="ghost" onClick={() => setLocation('/dashboard')} className="w-fit">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Files
             </Button>
@@ -209,13 +209,13 @@ export function AdminPanel() {
           </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="dark:bg-gray-900 dark:border-gray-800">
-            <CardHeader>
-              <div className="flex justify-between items-center">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                   <CardTitle className="dark:text-gray-100">Users</CardTitle>
                   <CardDescription className="dark:text-gray-400">Manage user accounts and permissions</CardDescription>
                 </div>
-                <Button onClick={() => setCreateUserOpen(true)}>
+                <Button onClick={() => setCreateUserOpen(true)} className="w-full sm:w-auto">
                   <UserPlus className="w-4 h-4 mr-2" />
                   Add User
                 </Button>
@@ -265,16 +265,16 @@ export function AdminPanel() {
                 {roles.map((role) => (
                   <div key={role.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center mb-2">
-                      <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
+                      <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2 flex-shrink-0" />
                       <p className="font-medium text-gray-900 dark:text-gray-100">{role.name}</p>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{role.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {role.can_read && <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Read</span>}
-                      {role.can_write && <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">Write</span>}
-                      {role.can_copy && <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded">Copy</span>}
-                      {role.can_delete && <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">Delete</span>}
-                      {role.can_share && <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">Share</span>}
+                    <div className="flex flex-wrap gap-1.5">
+                      {role.can_read && <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded whitespace-nowrap">Read</span>}
+                      {role.can_write && <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded whitespace-nowrap">Write</span>}
+                      {role.can_copy && <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded whitespace-nowrap">Copy</span>}
+                      {role.can_delete && <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded whitespace-nowrap">Delete</span>}
+                      {role.can_share && <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded whitespace-nowrap">Share</span>}
                     </div>
                   </div>
                 ))}
@@ -283,13 +283,13 @@ export function AdminPanel() {
           </Card>
 
           <Card className="dark:bg-gray-900 dark:border-gray-800 lg:col-span-2">
-            <CardHeader>
-              <div className="flex justify-between items-center">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                   <CardTitle className="dark:text-gray-100">Folder Assignments</CardTitle>
                   <CardDescription className="dark:text-gray-400">Assign folders to users with specific permissions</CardDescription>
                 </div>
-                <Button onClick={() => setAssignFolderOpen(true)}>
+                <Button onClick={() => setAssignFolderOpen(true)} className="w-full sm:w-auto">
                   <FolderPlus className="w-4 h-4 mr-2" />
                   Assign Folder
                 </Button>
@@ -301,31 +301,31 @@ export function AdminPanel() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No folder assignments yet</p>
                 ) : (
                   folderAssignments.map((assignment) => (
-                    <div key={assignment.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center gap-3">
-                        <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{assignment.folder_path}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Assigned to: {assignment.username}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-wrap gap-1">
-                          {assignment.can_read && <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Read</span>}
-                          {assignment.can_write && <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">Write</span>}
-                          {assignment.can_delete && <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">Delete</span>}
-                          {assignment.can_share && <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">Share</span>}
+                    <div key={assignment.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start gap-2 min-w-0 flex-1">
+                          <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-gray-100 break-all">{assignment.folder_path}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Assigned to: {assignment.username}
+                            </p>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveAssignment(assignment.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 flex-shrink-0 h-8 w-8 p-0"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-1 pl-7">
+                        {assignment.can_read && <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Read</span>}
+                        {assignment.can_write && <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">Write</span>}
+                        {assignment.can_delete && <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">Delete</span>}
+                        {assignment.can_share && <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">Share</span>}
                       </div>
                     </div>
                   ))

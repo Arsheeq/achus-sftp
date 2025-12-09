@@ -52,9 +52,14 @@ export interface ShareLinkResponse {
 
 class ApiClient {
   private token: string | null = null;
+  private onAuthChange: (() => void) | null = null;
 
   constructor() {
     this.token = localStorage.getItem('access_token');
+  }
+
+  setAuthChangeCallback(callback: () => void) {
+    this.onAuthChange = callback;
   }
 
   private getHeaders(): Headers {
@@ -110,6 +115,10 @@ class ApiClient {
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
 
+    if (this.onAuthChange) {
+      this.onAuthChange();
+    }
+
     return data;
   }
 
@@ -128,6 +137,10 @@ class ApiClient {
     this.token = null;
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+
+    if (this.onAuthChange) {
+      this.onAuthChange();
+    }
   }
 
   async getCurrentUser(): Promise<User> {

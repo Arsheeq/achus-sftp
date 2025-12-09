@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -8,6 +9,7 @@ import Landing from "./pages/landing";
 import { LoginPage } from "./pages/LoginPage";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminPanel } from "./pages/AdminPanel";
+import { api } from "./api/api";
 
 function ProtectedRoute({ component: Component, requireAdmin = false }: { component: React.ComponentType; requireAdmin?: boolean }) {
   const isAuthenticated = !!localStorage.getItem('access_token');
@@ -39,6 +41,12 @@ function ProtectedRoute({ component: Component, requireAdmin = false }: { compon
 }
 
 function App() {
+  useEffect(() => {
+    api.setAuthChangeCallback(() => {
+      queryClient.clear();
+    });
+  }, []);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <QueryClientProvider client={queryClient}>
