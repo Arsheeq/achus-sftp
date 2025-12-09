@@ -48,17 +48,20 @@ export function Dashboard() {
   const [newFolderName, setNewFolderName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [folderAccess, setFolderAccess] = useState<{ folders: any[]; is_admin: boolean; has_full_access: boolean } | null>(null);
 
   const loadData = async (retryCount = 0) => {
     try {
-      const [userData, filesData] = await Promise.all([
+      const [userData, filesData, folderAccessData] = await Promise.all([
         api.getCurrentUser(),
         api.getFiles(currentFolder),
+        api.getMyFolderAssignments(),
       ]);
       setUser(userData);
       setFiles(filesData);
+      setFolderAccess(folderAccessData);
       setLoading(false);
-      return userData; // Return userData for potential use in Header
+      return userData;
     } catch (error) {
       console.error('Error loading data:', error);
 
@@ -225,9 +228,23 @@ export function Dashboard() {
     return breadcrumbs;
   };
 
-  const canWrite = user?.is_admin || user?.roles.some(r => r.can_write);
-  const canDelete = user?.is_admin || user?.roles.some(r => r.can_delete);
-  const canShare = user?.is_admin || user?.roles.some(r => r.can_share);
+  const hasRoleWrite = user?.roles?.some(r => r.can_write) ?? false;
+  const hasRoleDelete = user?.roles?.some(r => r.can_delete) ?? false;
+  const hasRoleShare = user?.roles?.some(r => r.can_share) ?? false;
+  const hasRoleRead = user?.roles?.some(r => r.can_read) ?? false;
+  const userFolders = folderAccess?.folders ?? [];
+  const hasFolderWrite = userFolders.some(f => f.can_write);
+  const hasFolderDelete = userFolders.some(f => f.can_delete);
+  const hasFolderShare = userFolders.some(f => f.can_share);
+  
+  const canWrite = user?.is_admin || hasRoleWrite || hasFolderWrite;
+  const canDelete = user?.is_admin || hasRoleDelete || hasFolderDelete;
+  const canShare = user?.is_admin || hasRoleShare || hasFolderShare;
+
+  const hasNoAccess = !user?.is_admin && 
+    !hasRoleRead && 
+    userFolders.length === 0 &&
+    !folderAccess?.has_full_access;
 
   // Filter files based on search query
   const filteredFiles = files.filter(item => 
@@ -238,9 +255,11 @@ export function Dashboard() {
     user: user?.username, 
     isAdmin: user?.is_admin, 
     roles: user?.roles,
+    folderAccess,
     canWrite, 
     canDelete, 
-    canShare 
+    canShare,
+    hasNoAccess
   });
 
   if (loading) {
@@ -361,7 +380,15 @@ export function Dashboard() {
           </div>
         </div>
 
-        {filteredFiles.length === 0 && searchQuery ? (
+        {hasNoAccess && currentFolder === '/' ? (
+          <Card className="p-12 text-center dark:bg-gray-900 dark:border-gray-800">
+            <Folder className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No folders assigned</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              You don't have access to any folders yet. Please contact your administrator to request access.
+            </p>
+          </Card>
+        ) : filteredFiles.length === 0 && searchQuery ? (
           <Card className="p-12 text-center dark:bg-gray-900 dark:border-gray-800">
             <Search className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No files found</h3>

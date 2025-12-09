@@ -316,6 +316,17 @@ async def list_files(
     
     accessible_folders = get_user_accessible_folders(db, current_user)
     
+    # Special case: users with no folder assignments can access root but see nothing
+    # This allows the frontend to show "No folders assigned" state
+    if accessible_folders is not None and len(accessible_folders) == 0:
+        if folder_path == "/" or folder_path == "":
+            return []  # Return empty list for root, frontend shows "no access" message
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this folder"
+            )
+    
     if accessible_folders is not None and not can_access_folder(folder_path, accessible_folders):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
