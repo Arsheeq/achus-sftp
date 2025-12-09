@@ -5,9 +5,70 @@ from datetime import datetime, timedelta
 import uuid
 from backend.database.db import get_db
 from backend.models.user import User
-from backend.models.file import File, ShareLink
+from backend.models.file import File, ShareLink, FolderAssignment
 from backend.auth.security import get_current_user, check_permission
 from backend.services.s3_service import s3_service
+
+def get_user_accessible_folders(db: Session, user: User) -> list[str]:
+    if user.is_admin:
+        return None
+    assignments = db.query(FolderAssignment).filter(
+        FolderAssignment.user_id == user.id,
+        FolderAssignment.can_read == True
+    ).all()
+    return [a.folder_path for a in assignments]
+
+def can_access_folder(folder_path: str, accessible_folders: list[str] | None) -> bool:
+    if accessible_folders is None:
+        return True
+    normalized = "/" + folder_path.strip("/") if folder_path.strip("/") else "/"
+    for af in accessible_folders:
+        af_normalized = "/" + af.strip("/") if af.strip("/") else "/"
+        if normalized == af_normalized or normalized.startswith(af_normalized.rstrip("/") + "/"):
+            return True
+        if af_normalized.startswith(normalized.rstrip("/") + "/"):
+            return True
+    return False
+
+def user_can_write_folder(db: Session, user: User, folder_path: str) -> bool:
+    if user.is_admin:
+        return True
+    normalized = "/" + folder_path.strip("/") if folder_path.strip("/") else "/"
+    assignment = db.query(FolderAssignment).filter(
+        FolderAssignment.user_id == user.id,
+        FolderAssignment.folder_path == normalized,
+        FolderAssignment.can_write == True
+    ).first()
+    if assignment:
+        return True
+    for af in db.query(FolderAssignment).filter(
+        FolderAssignment.user_id == user.id,
+        FolderAssignment.can_write == True
+    ).all():
+        af_normalized = "/" + af.folder_path.strip("/") if af.folder_path.strip("/") else "/"
+        if normalized.startswith(af_normalized.rstrip("/") + "/") or normalized == af_normalized:
+            return True
+    return False
+
+def user_can_delete_folder(db: Session, user: User, folder_path: str) -> bool:
+    if user.is_admin:
+        return True
+    normalized = "/" + folder_path.strip("/") if folder_path.strip("/") else "/"
+    assignment = db.query(FolderAssignment).filter(
+        FolderAssignment.user_id == user.id,
+        FolderAssignment.folder_path == normalized,
+        FolderAssignment.can_delete == True
+    ).first()
+    if assignment:
+        return True
+    for af in db.query(FolderAssignment).filter(
+        FolderAssignment.user_id == user.id,
+        FolderAssignment.can_delete == True
+    ).all():
+        af_normalized = "/" + af.folder_path.strip("/") if af.folder_path.strip("/") else "/"
+        if normalized.startswith(af_normalized.rstrip("/") + "/") or normalized == af_normalized:
+            return True
+    return False
 
 router = APIRouter(prefix="/api/files", tags=["File Management"])
 
@@ -49,6 +110,12 @@ async def get_upload_url(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to upload files"
+        )
+    
+    if not user_can_write_folder(db, current_user, request.folder_path):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have write permission for this folder"
         )
     
     # Generate S3 key without UUID prefix - use exact filename
@@ -167,6 +234,14 @@ async def list_files(
             detail="You don't have permission to view files"
         )
     
+    accessible_folders = get_user_accessible_folders(db, current_user)
+    
+    if accessible_folders is not None and not can_access_folder(folder_path, accessible_folders):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this folder"
+        )
+    
     # Get files from database for this folder
     db_files = db.query(File).filter(File.folder_path == folder_path).all()
     db_files_dict = {file.s3_key: file for file in db_files}
@@ -272,7 +347,7 @@ async def list_files(
                 "type": "file"
             })
     
-    # Add folders to the result
+    # Add folders to the result (filter by access for non-admin users)
     for folder_name in sorted(folders_result):
         # Calculate the actual folder path for navigation
         if folder_name == '/':
@@ -285,6 +360,10 @@ async def list_files(
                 actual_folder_path = f"/{folder_name}"
             else:
                 actual_folder_path = f"{folder_path.rstrip('/')}/{folder_name}"
+        
+        # Check if user has access to this folder
+        if accessible_folders is not None and not can_access_folder(actual_folder_path, accessible_folders):
+            continue
         
         # Insert folders at the beginning
         files_result.insert(0, {
@@ -504,6 +583,12 @@ async def create_folder(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to create folders"
+        )
+    
+    if not user_can_write_folder(db, current_user, request.parent_folder):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have write permission for this folder"
         )
     
     # Create folder marker in S3 (folder + .keep file)

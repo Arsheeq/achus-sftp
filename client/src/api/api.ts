@@ -435,6 +435,56 @@ class ApiClient {
       throw new Error('Failed to delete role');
     }
   }
+
+  async getFolderAssignments(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/folder-assignments/`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch folder assignments');
+    }
+
+    return response.json();
+  }
+
+  async assignFolder(data: { folder_path: string; user_id: number; can_read?: boolean; can_write?: boolean; can_delete?: boolean }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/folder-assignments/`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to assign folder');
+    }
+
+    return response.json();
+  }
+
+  async removeAssignment(assignmentId: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/folder-assignments/${assignmentId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to remove assignment');
+    }
+  }
+
+  async getMyFolderAssignments(): Promise<{ folders: any[]; is_admin: boolean; has_full_access: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/folder-assignments/my-folders`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch folder assignments');
+    }
+
+    return response.json();
+  }
 }
 
 export const api = new ApiClient();

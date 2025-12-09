@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, BigInteger
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, BigInteger, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from backend.database.db import Base
@@ -17,6 +17,21 @@ class File(Base):
     
     owner = relationship("User", back_populates="files")
     share_links = relationship("ShareLink", back_populates="file", cascade="all, delete-orphan")
+
+class FolderAssignment(Base):
+    __tablename__ = "folder_assignments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    folder_path = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    can_read = Column(Boolean, default=True)
+    can_write = Column(Boolean, default=False)
+    can_delete = Column(Boolean, default=False)
+    assigned_by = Column(Integer, ForeignKey('users.id'))
+    assigned_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", foreign_keys=[user_id], backref="folder_assignments")
+    assigner = relationship("User", foreign_keys=[assigned_by])
 
 class ShareLink(Base):
     __tablename__ = "share_links"

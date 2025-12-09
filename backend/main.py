@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
 
-from backend.routes import auth, users, roles, files
+from backend.routes import auth, users, roles, files, folder_assignments
 from backend.database.db import init_db, SessionLocal
 from backend.database.seeds import ensure_seed_data
 
@@ -29,6 +29,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(roles.router)
 app.include_router(files.router)
+app.include_router(folder_assignments.router)
 
 @app.on_event("startup")
 async def startup_event():
