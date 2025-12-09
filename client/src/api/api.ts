@@ -194,36 +194,55 @@ class ApiClient {
     return response.json();
   }
 
-  async uploadFile(file: File, uploadUrl: string, uploadFields: Record<string, string>) {
-    const formData = new FormData();
+  async uploadFile(
+    file: File, 
+    uploadUrl: string, 
+    uploadFields: Record<string, string>,
+    onProgress?: (progress: number) => void
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
 
-    Object.entries(uploadFields).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-
-    formData.append('file', file);
-
-    try {
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
+      Object.entries(uploadFields).forEach(([key, value]) => {
+        formData.append(key, value);
       });
 
-      // S3 returns 204 No Content on success, which is ok
-      if (!response.ok && response.status !== 204) {
-        const errorText = await response.text();
-        console.error('S3 upload error:', errorText);
-        throw new Error(`Failed to upload file to S3: ${response.status}`);
-      }
-    } catch (error) {
-      // If the error is a network error (CORS), the upload might have actually succeeded
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      formData.append('file', file);
+
+      const xhr = new XMLHttpRequest();
+      
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && onProgress) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          onProgress(progress);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        // S3 returns 204 No Content on success, which is ok
+        if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 204) {
+          resolve();
+        } else {
+          console.error('S3 upload error:', xhr.responseText);
+          reject(new Error(`Failed to upload file to S3: ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        // Network errors might mean CORS issues but upload could have succeeded
         console.warn('Network error during S3 upload - CORS issue, but file may have uploaded');
-        // Don't throw here - let the completion step verify
-        return;
-      }
-      throw error;
-    }
+        // Don't reject here - let the completion step verify
+        resolve();
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload was aborted'));
+      });
+
+      xhr.open('POST', uploadUrl);
+      xhr.send(formData);
+    });
   }
 
   async getDownloadUrl(fileId: number): Promise<{ download_url: string; filename: string }> {

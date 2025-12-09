@@ -59,15 +59,19 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess, currentFolder 
           currentFolder
         );
 
-        setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { ...f, progress: 30 } : f
-        ));
-
-        await api.uploadFile(fileItem.file, uploadData.upload_url, uploadData.upload_fields);
-
-        setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { ...f, progress: 70 } : f
-        ));
+        // Use XMLHttpRequest progress tracking for better UX with large files
+        await api.uploadFile(
+          fileItem.file, 
+          uploadData.upload_url, 
+          uploadData.upload_fields,
+          (progress) => {
+            // Map S3 upload progress (0-100) to overall progress (30-90)
+            const mappedProgress = 30 + Math.round(progress * 0.6);
+            setFiles(prev => prev.map((f, idx) => 
+              idx === i ? { ...f, progress: mappedProgress } : f
+            ));
+          }
+        );
 
         // Complete the upload to update file metadata
         const completeResponse = await fetch(`/api/files/${uploadData.file_id}/complete-upload`, {

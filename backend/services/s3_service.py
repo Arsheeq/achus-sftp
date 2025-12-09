@@ -118,10 +118,12 @@ class S3Service:
     def create_folder(self, folder_marker_key: str):
         try:
             # Create an empty .keep file to represent the folder
+            # Oracle Cloud requires ContentLength header even for empty objects
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=folder_marker_key,
-                Body=b''
+                Body=b'',
+                ContentLength=0
             )
             return True
         except ClientError as e:

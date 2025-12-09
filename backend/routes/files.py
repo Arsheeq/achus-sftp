@@ -19,15 +19,60 @@ def get_user_accessible_folders(db: Session, user: User) -> list[str]:
     return [a.folder_path for a in assignments]
 
 def can_access_folder(folder_path: str, accessible_folders: list[str] | None) -> bool:
+    """Check if user can navigate to/view this folder (for navigation purposes)."""
     if accessible_folders is None:
         return True
     normalized = "/" + folder_path.strip("/") if folder_path.strip("/") else "/"
     for af in accessible_folders:
         af_normalized = "/" + af.strip("/") if af.strip("/") else "/"
-        if normalized == af_normalized or normalized.startswith(af_normalized.rstrip("/") + "/"):
+        # User has direct access to this folder
+        if normalized == af_normalized:
             return True
+        # This folder is a subfolder of an accessible folder
+        if normalized.startswith(af_normalized.rstrip("/") + "/"):
+            return True
+        # This folder is a parent of an accessible folder (allow navigation)
         if af_normalized.startswith(normalized.rstrip("/") + "/"):
             return True
+    return False
+
+def should_show_folder(folder_path: str, accessible_folders: list[str] | None) -> bool:
+    """Check if a folder should be displayed in the file listing.
+    
+    A folder is shown only if:
+    1. User has direct access to this folder, OR
+    2. This folder is a subfolder of an accessible folder, OR
+    3. This folder is the IMMEDIATE next step on the path to an accessible folder
+       (e.g., if user has /dept/team1, at root they see 'dept', at /dept they see 'team1' only)
+    """
+    if accessible_folders is None:
+        return True
+    normalized = "/" + folder_path.strip("/") if folder_path.strip("/") else "/"
+    
+    for af in accessible_folders:
+        af_normalized = "/" + af.strip("/") if af.strip("/") else "/"
+        
+        # Case 1: User has direct access to this folder
+        if normalized == af_normalized:
+            return True
+        
+        # Case 2: This folder is a subfolder of an accessible folder
+        if normalized.startswith(af_normalized.rstrip("/") + "/"):
+            return True
+        
+        # Case 3: This folder is the immediate next component on the path to accessible folder
+        # Split both paths into components and check if this folder is the next step
+        normalized_parts = [p for p in normalized.split("/") if p]
+        af_parts = [p for p in af_normalized.split("/") if p]
+        
+        # If accessible folder has more components than normalized folder
+        # and accessible folder path starts with normalized path
+        if len(af_parts) > len(normalized_parts):
+            # Check if this normalized path is a prefix of the accessible folder
+            is_prefix = all(normalized_parts[i] == af_parts[i] for i in range(len(normalized_parts)))
+            if is_prefix:
+                return True
+    
     return False
 
 def user_can_write_folder(db: Session, user: User, folder_path: str) -> bool:
@@ -361,8 +406,8 @@ async def list_files(
             else:
                 actual_folder_path = f"{folder_path.rstrip('/')}/{folder_name}"
         
-        # Check if user has access to this folder
-        if accessible_folders is not None and not can_access_folder(actual_folder_path, accessible_folders):
+        # Check if user should see this folder (filter out sibling folders)
+        if accessible_folders is not None and not should_show_folder(actual_folder_path, accessible_folders):
             continue
         
         # Insert folders at the beginning
