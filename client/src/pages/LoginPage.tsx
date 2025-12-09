@@ -36,7 +36,7 @@ export function LoginPage() {
 
   return (
     <Layout>
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
@@ -46,8 +46,8 @@ export function LoginPage() {
                 className="h-20"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Achu's SFTP</h1>
-            <p className="text-gray-600">Secure File Transfer & Storage Platform</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Achu's SFTP</h1>
+            <p className="text-gray-600 dark:text-gray-300">Secure File Transfer & Storage Platform</p>
           </div>
 
         <Card>
@@ -64,11 +64,11 @@ export function LoginPage() {
               )}
 
               <div className="space-y-2">
-                <label htmlFor="username" className="text-sm font-medium text-gray-700">
+                <label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                   Username
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
                   <Input
                     id="username"
                     type="text"
@@ -83,11 +83,11 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-200">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
                   <Input
                     id="password"
                     type="password"

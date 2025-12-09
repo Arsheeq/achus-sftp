@@ -6,17 +6,23 @@ import uuid
 
 class S3Service:
     def __init__(self):
-        # Oracle Cloud Object Storage S3-compatible endpoint
-        endpoint_url = f"https://{settings.ORACLE_NAMESPACE}.compat.objectstorage.{settings.ORACLE_REGION}.oraclecloud.com"
-        
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=settings.ORACLE_ACCESS_KEY,
-            aws_secret_access_key=settings.ORACLE_SECRET_KEY,
-            region_name=settings.ORACLE_REGION,
-            endpoint_url=endpoint_url
-        )
+        self._s3_client = None
         self.bucket_name = settings.ORACLE_BUCKET_NAME
+    
+    @property
+    def s3_client(self):
+        if self._s3_client is None:
+            if not settings.ORACLE_NAMESPACE:
+                raise ValueError("Oracle Cloud credentials not configured. Please set ORACLE_NAMESPACE, ORACLE_ACCESS_KEY, ORACLE_SECRET_KEY, and ORACLE_BUCKET_NAME.")
+            endpoint_url = f"https://{settings.ORACLE_NAMESPACE}.compat.objectstorage.{settings.ORACLE_REGION}.oraclecloud.com"
+            self._s3_client = boto3.client(
+                's3',
+                aws_access_key_id=settings.ORACLE_ACCESS_KEY,
+                aws_secret_access_key=settings.ORACLE_SECRET_KEY,
+                region_name=settings.ORACLE_REGION,
+                endpoint_url=endpoint_url
+            )
+        return self._s3_client
 
     def generate_presigned_upload_url(self, s3_key: str, content_type: str, expiration: int = 3600):
         try:
