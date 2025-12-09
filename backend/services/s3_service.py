@@ -1,3 +1,8 @@
+import os
+# Fix for boto3 1.36.1+ compatibility with Oracle Cloud Object Storage
+os.environ['AWS_REQUEST_CHECKSUM_CALCULATION'] = 'when_required'
+os.environ['AWS_RESPONSE_CHECKSUM_VALIDATION'] = 'when_required'
+
 import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
@@ -117,13 +122,13 @@ class S3Service:
 
     def create_folder(self, folder_marker_key: str):
         try:
-            # Create an empty .keep file to represent the folder
-            # Oracle Cloud requires ContentLength header even for empty objects
+            # Create a .keep file to represent the folder
+            # Oracle Cloud requires bytes body directly (not BytesIO) with content
+            content = b'folder marker'
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=folder_marker_key,
-                Body=b'',
-                ContentLength=0
+                Body=content
             )
             return True
         except ClientError as e:

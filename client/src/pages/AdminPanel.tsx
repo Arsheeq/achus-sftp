@@ -32,7 +32,7 @@ export function AdminPanel() {
   const [assignFolderOpen, setAssignFolderOpen] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password: '', email: '', isAdmin: false, roleIds: [] as number[] });
   const [editUser, setEditUser] = useState<{ id: number; email: string; isAdmin: boolean; roleIds: number[] } | null>(null);
-  const [newAssignment, setNewAssignment] = useState({ folderPath: '', userId: 0, canRead: true, canWrite: false, canDelete: false });
+  const [newAssignment, setNewAssignment] = useState({ folderPath: '', userId: 0, canRead: true, canWrite: false, canDelete: false, canShare: false });
 
   useEffect(() => {
     loadData();
@@ -149,8 +149,9 @@ export function AdminPanel() {
         can_read: newAssignment.canRead,
         can_write: newAssignment.canWrite,
         can_delete: newAssignment.canDelete,
+        can_share: newAssignment.canShare,
       });
-      setNewAssignment({ folderPath: '', userId: 0, canRead: true, canWrite: false, canDelete: false });
+      setNewAssignment({ folderPath: '', userId: 0, canRead: true, canWrite: false, canDelete: false, canShare: false });
       setAssignFolderOpen(false);
       loadData();
       toast({
@@ -315,6 +316,7 @@ export function AdminPanel() {
                           {assignment.can_read && <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Read</span>}
                           {assignment.can_write && <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">Write</span>}
                           {assignment.can_delete && <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">Delete</span>}
+                          {assignment.can_share && <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">Share</span>}
                         </div>
                         <Button
                           variant="ghost"
@@ -531,6 +533,16 @@ export function AdminPanel() {
                     className="dark:bg-gray-800"
                   />
                   <label htmlFor="can-delete" className="text-sm dark:text-gray-200">Can Delete - Remove files and folders</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="can-share"
+                    checked={newAssignment.canShare}
+                    onChange={(e) => setNewAssignment({ ...newAssignment, canShare: e.target.checked })}
+                    className="dark:bg-gray-800"
+                  />
+                  <label htmlFor="can-share" className="text-sm dark:text-gray-200">Can Share - Create share links for files</label>
                 </div>
               </div>
             </div>

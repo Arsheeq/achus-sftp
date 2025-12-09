@@ -27,6 +27,7 @@ class FolderAssignment(Base):
     can_read = Column(Boolean, default=True)
     can_write = Column(Boolean, default=False)
     can_delete = Column(Boolean, default=False)
+    can_share = Column(Boolean, default=False)
     assigned_by = Column(Integer, ForeignKey('users.id'))
     assigned_at = Column(DateTime, default=datetime.utcnow)
     

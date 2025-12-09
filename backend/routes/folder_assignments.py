@@ -19,6 +19,7 @@ class AssignFolderRequest(BaseModel):
     can_read: bool = True
     can_write: bool = False
     can_delete: bool = False
+    can_share: bool = False
 
 class FolderAssignmentResponse(BaseModel):
     id: int
@@ -28,6 +29,7 @@ class FolderAssignmentResponse(BaseModel):
     can_read: bool
     can_write: bool
     can_delete: bool
+    can_share: bool
 
 class BulkAssignRequest(BaseModel):
     folder_path: str
@@ -35,6 +37,7 @@ class BulkAssignRequest(BaseModel):
     can_read: bool = True
     can_write: bool = False
     can_delete: bool = False
+    can_share: bool = False
 
 @router.post("/")
 async def assign_folder(
@@ -60,6 +63,7 @@ async def assign_folder(
         existing.can_read = request.can_read
         existing.can_write = request.can_write
         existing.can_delete = request.can_delete
+        existing.can_share = request.can_share
         db.commit()
         db.refresh(existing)
         return {
@@ -76,6 +80,7 @@ async def assign_folder(
         can_read=request.can_read,
         can_write=request.can_write,
         can_delete=request.can_delete,
+        can_share=request.can_share,
         assigned_by=current_user.id
     )
     
@@ -117,6 +122,7 @@ async def bulk_assign_folder(
             existing.can_read = request.can_read
             existing.can_write = request.can_write
             existing.can_delete = request.can_delete
+            existing.can_share = request.can_share
             results.append({"user_id": user.id, "username": user.username, "status": "updated"})
         else:
             new_assignment = FolderAssignment(
@@ -125,6 +131,7 @@ async def bulk_assign_folder(
                 can_read=request.can_read,
                 can_write=request.can_write,
                 can_delete=request.can_delete,
+                can_share=request.can_share,
                 assigned_by=current_user.id
             )
             db.add(new_assignment)
@@ -152,6 +159,7 @@ async def list_all_assignments(
             "can_read": a.can_read,
             "can_write": a.can_write,
             "can_delete": a.can_delete,
+            "can_share": a.can_share,
             "assigned_at": a.assigned_at.isoformat() if a.assigned_at else None
         }
         for a in assignments
@@ -176,7 +184,8 @@ async def get_folder_assignments(
             "username": a.user.username if a.user else "Unknown",
             "can_read": a.can_read,
             "can_write": a.can_write,
-            "can_delete": a.can_delete
+            "can_delete": a.can_delete,
+            "can_share": a.can_share
         }
         for a in assignments
     ]
@@ -197,7 +206,8 @@ async def get_user_assignments(
             "folder_path": a.folder_path,
             "can_read": a.can_read,
             "can_write": a.can_write,
-            "can_delete": a.can_delete
+            "can_delete": a.can_delete,
+            "can_share": a.can_share
         }
         for a in assignments
     ]
@@ -221,7 +231,8 @@ async def get_my_folder_assignments(
                 "folder_path": a.folder_path,
                 "can_read": a.can_read,
                 "can_write": a.can_write,
-                "can_delete": a.can_delete
+                "can_delete": a.can_delete,
+                "can_share": a.can_share
             }
             for a in assignments
         ],

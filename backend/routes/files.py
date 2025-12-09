@@ -115,6 +115,29 @@ def user_can_delete_folder(db: Session, user: User, folder_path: str) -> bool:
             return True
     return False
 
+def user_can_read_file(db: Session, user: User, s3_key: str) -> bool:
+    """Check if user can read a file based on its s3_key path."""
+    if user.is_admin:
+        return True
+    
+    # Extract folder path from s3_key
+    # s3_key format: "folder/subfolder/file.txt" or "file.txt"
+    parts = s3_key.split('/')
+    if len(parts) == 1:
+        # File at root level
+        folder_path = "/"
+    else:
+        # File in a folder
+        folder_path = "/" + "/".join(parts[:-1])
+    
+    accessible_folders = get_user_accessible_folders(db, user)
+    
+    # If no folder assignments, deny access
+    if accessible_folders is not None and len(accessible_folders) == 0:
+        return False
+    
+    return can_access_folder(folder_path, accessible_folders)
+
 router = APIRouter(prefix="/api/files", tags=["File Management"])
 
 class UploadRequest(BaseModel):
@@ -151,17 +174,14 @@ async def get_upload_url(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "write"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to upload files"
-        )
-    
+    # Check folder-specific permissions first (allows folder assignments to work)
     if not user_can_write_folder(db, current_user, request.folder_path):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have write permission for this folder"
-        )
+        # If no folder permission, fall back to role-based check
+        if not check_permission(current_user, "write", db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to upload files"
+            )
     
     # Generate S3 key without UUID prefix - use exact filename
     folder_prefix = request.folder_path.strip('/')
@@ -228,10 +248,20 @@ async def list_folders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "read"):
+    if not check_permission(current_user, "read", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to view folders"
+        )
+    
+    # Get user's accessible folders for filtering
+    accessible_folders = get_user_accessible_folders(db, current_user)
+    
+    # Check if user can access the requested folder path
+    if accessible_folders is not None and not can_access_folder(folder_path, accessible_folders):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this folder"
         )
     
     # Convert UI folder path to S3 prefix (root "/" becomes empty string "")
@@ -257,11 +287,16 @@ async def list_folders(
             if folder_name:
                 folders.add(folder_name)
     
-    # Convert folder named "/" to "slash" for display
+    # Convert folder named "/" to "slash" for display and filter by access
     folder_list = []
     for folder in sorted(folders):
         display_name = "[slash]" if folder == "/" else folder
         actual_path = f"{folder_path.rstrip('/')}/{folder}"
+        
+        # Filter folders based on user access
+        if accessible_folders is not None and not should_show_folder(actual_path, accessible_folders):
+            continue
+        
         folder_list.append({"name": display_name, "path": actual_path})
     
     return folder_list
@@ -273,7 +308,7 @@ async def list_files(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "read"):
+    if not check_permission(current_user, "read", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to view files"
@@ -431,7 +466,7 @@ async def get_download_url(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "read"):
+    if not check_permission(current_user, "read", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to download files"
@@ -443,6 +478,10 @@ async def get_download_url(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
+    
+    accessible_folders = get_user_accessible_folders(db, current_user)
+    if accessible_folders is not None and not can_access_folder(file.folder_path, accessible_folders):
+        raise HTTPException(status_code=403, detail="You don't have access to this file")
     
     download_url = s3_service.generate_presigned_download_url(file.s3_key)
     
@@ -463,11 +502,14 @@ async def get_download_url_by_key(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "read"):
+    if not check_permission(current_user, "read", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to download files"
         )
+    
+    if not user_can_read_file(db, current_user, s3_key):
+        raise HTTPException(status_code=403, detail="You don't have access to this file")
     
     download_url = s3_service.generate_presigned_download_url(s3_key)
     
@@ -492,7 +534,7 @@ async def copy_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "copy"):
+    if not check_permission(current_user, "copy", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to copy files"
@@ -504,6 +546,13 @@ async def copy_file(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
+    
+    accessible_folders = get_user_accessible_folders(db, current_user)
+    if accessible_folders is not None and not can_access_folder(original_file.folder_path, accessible_folders):
+        raise HTTPException(status_code=403, detail="You don't have access to this file")
+    
+    if not user_can_write_folder(db, current_user, request.destination_folder):
+        raise HTTPException(status_code=403, detail="You don't have write permission for the destination folder")
     
     new_s3_key = f"{request.destination_folder.strip('/')}/{original_file.filename}"
     
@@ -539,7 +588,7 @@ async def delete_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "delete"):
+    if not check_permission(current_user, "delete", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete files"
@@ -551,6 +600,9 @@ async def delete_file(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
+    
+    if not user_can_delete_folder(db, current_user, file.folder_path):
+        raise HTTPException(status_code=403, detail="You don't have delete permission for this folder")
     
     s3_service.delete_object(file.s3_key)
     
@@ -565,11 +617,21 @@ async def delete_file_by_key(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "delete"):
+    if not check_permission(current_user, "delete", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete files"
         )
+    
+    # Extract folder path from s3_key for permission check
+    parts = s3_key.split('/')
+    if len(parts) == 1:
+        folder_path = "/"
+    else:
+        folder_path = "/" + "/".join(parts[:-1])
+    
+    if not user_can_delete_folder(db, current_user, folder_path):
+        raise HTTPException(status_code=403, detail="You don't have delete permission for this folder")
     
     # Delete from S3
     success = s3_service.delete_object(s3_key)
@@ -594,7 +656,7 @@ async def bulk_delete_files(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "delete"):
+    if not check_permission(current_user, "delete", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete files"
@@ -607,6 +669,10 @@ async def bulk_delete_files(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No files found"
         )
+    
+    for file in files:
+        if not user_can_delete_folder(db, current_user, file.folder_path):
+            raise HTTPException(status_code=403, detail=f"You don't have delete permission for file: {file.filename}")
     
     s3_keys = [file.s3_key for file in files]
     s3_service.delete_multiple_objects(s3_keys)
@@ -624,7 +690,7 @@ async def create_folder(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "write"):
+    if not check_permission(current_user, "write", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to create folders"
@@ -662,7 +728,20 @@ async def create_share_link(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not check_permission(current_user, "share"):
+    # Get file first to check folder access
+    file = db.query(File).filter(File.id == file_id).first()
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+    
+    # Check if user has folder access first
+    accessible_folders = get_user_accessible_folders(db, current_user)
+    has_folder_access = accessible_folders is None or can_access_folder(file.folder_path, accessible_folders)
+    
+    # If no folder access and no role permission, deny
+    if not has_folder_access and not check_permission(current_user, "share", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to share files"
@@ -670,13 +749,6 @@ async def create_share_link(
     
     # Enforce maximum expiry of 12 hours
     expires_in_hours = min(request.expires_in_hours, 12)
-    
-    file = db.query(File).filter(File.id == file_id).first()
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
-        )
     
     # Generate S3 presigned URL directly
     expiration_seconds = expires_in_hours * 3600
