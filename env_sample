@@ -1,8 +1,25 @@
-DATABASE_URL=postgresql://user:password@localhost:5432/your_database
-SECRET_KEY=your-secret-key
-# Oracle Cloud credentials
-ORACLE_NAMESPACE=your-namespace
-ORACLE_ACCESS_KEY=your-access-key
-ORACLE_SECRET_KEY=your-secret-key
-ORACLE_BUCKET_NAME=your-bucket-name
-ORACLE_REGION=your-region
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/enlitedu
+
+# JWT Secret (change this to a random string)
+SECRET_KEY=your-secret-key-change-to-random-string
+
+# AWS S3 Configuration
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=your-s3-bucket-name
+
+DATABASE_URL=postgresql://username:password@localhost:5432/enlitedu
+
+# JWT Secret (IMPORTANT: Change this to a strong random string in production)
+SECRET_KEY=your-secret-key-change-to-random-string-minimum-32-characters
+
+# Oracle Cloud Object Storage Configuration
+# Get these from your Oracle Cloud Console
+ORACLE_ACCESS_KEY=your-oracle-access-key
+ORACLE_SECRET_KEY=your-oracle-secret-key
+ORACLE_NAMESPACE=your-oracle-namespace
+ORACLE_REGION=us-phoenix-1
+ORACLE_BUCKET_NAME=your-oracle-bucket-name
+

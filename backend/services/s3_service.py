@@ -34,7 +34,7 @@ class S3Service:
                 Fields={"Content-Type": content_type},
                 Conditions=[
                     {"Content-Type": content_type},
-                    ["content-length-range", 0, 104857600]
+                    ["content-length-range", 0, 5368709120]
                 ],
                 ExpiresIn=expiration
             )

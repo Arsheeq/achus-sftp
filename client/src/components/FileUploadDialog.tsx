@@ -117,9 +117,19 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess, currentFolder 
     onOpenChange(false);
   };
 
+  const handleInteractOutside = (e: Event) => {
+    if (uploading) {
+      e.preventDefault();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(open) => !uploading && handleClose()}>
+      <DialogContent 
+        className="max-w-md sm:max-w-lg max-h-[90vh] overflow-hidden"
+        onInteractOutside={handleInteractOutside}
+        onEscapeKeyDown={(e) => uploading && e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Upload Files</DialogTitle>
           <DialogDescription>
@@ -127,7 +137,7 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess, currentFolder 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto max-h-[60vh]">
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-4 sm:p-8 text-center cursor-pointer transition-colors ${
@@ -153,18 +163,20 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess, currentFolder 
           {files.length > 0 && (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {files.map((file, index) => (
-                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
                   {file.status === 'completed' ? (
                     <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
                   ) : (
                     <File className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" title={file.file.name}>
                       {file.file.name}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {(file.file.size / 1024).toFixed(1)} KB
+                      {file.file.size >= 1048576 
+                        ? `${(file.file.size / 1048576).toFixed(1)} MB` 
+                        : `${(file.file.size / 1024).toFixed(1)} KB`}
                     </p>
                     {file.status === 'uploading' && (
                       <Progress value={file.progress} className="mt-1 h-1" />
