@@ -82,6 +82,31 @@ async def validation_exception_handler(request, exc):
         content={"detail": exc.errors()}
     )
 
+# Serve static files at root level
+@app.get("/favicon.png")
+async def serve_favicon():
+    if os.path.exists("dist/public/favicon.png"):
+        return FileResponse("dist/public/favicon.png", media_type="image/png")
+    return {"message": "Favicon not found"}
+
+@app.get("/achu-logo.png")
+async def serve_logo():
+    if os.path.exists("dist/public/achu-logo.png"):
+        return FileResponse("dist/public/achu-logo.png", media_type="image/png")
+    return {"message": "Logo not found"}
+
+@app.get("/achu-logo-dark.png")
+async def serve_logo_dark():
+    if os.path.exists("dist/public/achu-logo-dark.png"):
+        return FileResponse("dist/public/achu-logo-dark.png", media_type="image/png")
+    return {"message": "Dark logo not found"}
+
+@app.get("/enlitedu-logo.png")
+async def serve_enlitedu_logo():
+    if os.path.exists("dist/public/enlitedu-logo.png"):
+        return FileResponse("dist/public/enlitedu-logo.png", media_type="image/png")
+    return {"message": "Logo not found"}
+
 # Serve index.html for the root path
 @app.get("/")
 async def serve_root():

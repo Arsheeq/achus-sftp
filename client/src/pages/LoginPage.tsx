@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useTheme } from 'next-themes';
 import { api } from '../api/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,6 +13,7 @@ import { Layout } from '../components/Layout';
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
+  const { resolvedTheme } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -39,7 +41,7 @@ export function LoginPage() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <img
-                src="/achu-logo.png"
+                src={resolvedTheme === 'dark' ? '/achu-logo-dark.png' : '/achu-logo.png'}
                 alt="Achu's SFTP Logo"
                 className="h-20"
               />

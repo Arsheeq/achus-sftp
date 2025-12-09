@@ -1,8 +1,11 @@
 import { FileUp, Shield, Zap, Users } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/Layout';
 
 export default function Landing() {
+  const { resolvedTheme } = useTheme();
+  
   return (
     <Layout>
 
@@ -10,7 +13,7 @@ export default function Landing() {
       <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex justify-center mb-6 sm:mb-8">
-            <img src="/achu-logo.png" alt="Achu's SFTP" className="h-16 sm:h-20" />
+            <img src={resolvedTheme === 'dark' ? '/achu-logo-dark.png' : '/achu-logo.png'} alt="Achu's SFTP" className="h-16 sm:h-20" />
           </div>
           
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-yellow-500 bg-clip-text text-transparent px-2">
